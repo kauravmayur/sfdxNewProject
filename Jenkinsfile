@@ -11,7 +11,7 @@ node {
     def PACKAGE_NAME='0Ho1U000000CaUzSAK'
     def PACKAGE_VERSION
     def SF_INSTANCE_URL = env.SFDC_HOST_DH ?: "https://login.salesforce.com"
-
+    def SFDC_USERNAME
     def toolbelt = tool 'toolbelt'
 
 
@@ -31,7 +31,7 @@ node {
     println 'before withEnv'
     withEnv(["HOME=${env.WORKSPACE}"]) {
         println 'after withEnv'
-        
+        println 'This is current Org'
         withCredentials([file(credentialsId: SERVER_KEY_CREDENTALS_ID, variable: 'server_key_file')]) {
 
             // -------------------------------------------------------------------------
@@ -41,7 +41,7 @@ node {
             stage('Authorize DevHub') {
                 println 'code in Authorize DevHub'
                 //rc = command "${toolbelt} force:auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --username ${SF_USERNAME} --jwtkeyfile ${server_key_file} --setdefaultdevhubusername --setalias HubOrg"
-                rc = command "${toolbelt} force:auth:jwt:grant --clientid ${SF_CONSUMER_KEY} --username ${SF_USERNAME} --jwtkeyfile \"${server_key_file}\" --setdefaultdevhubusername --instanceurl ${SF_INSTANCE_URL}"
+                rc = command "${toolbelt} force:auth:jwt:grant --clientid ${SF_CONSUMER_KEY} --username ${SF_USERNAME} --jwtkeyfile \"${server_key_file}\" --setdefaultdevhubusername --instanceurl ${SF_INSTANCE_URL}  --setalias HubOrg"
                 println rc
                 if (rc != 0) {
                     println 'code in Authorize DevHub error block'
@@ -52,36 +52,48 @@ node {
             // -------------------------------------------------------------------------
             // Create new scratch org to test your code.
             // -------------------------------------------------------------------------
-
             stage('Create Test Scratch Org') {
-                //rc = command "${toolbelt} force:org:create --targetdevhubusername HubOrg --setdefaultusername --definitionfile config/project-scratch-def.json --setalias ciorg --wait 10 --durationdays 1"
-                rc = command "${toolbelt} force:org:create --targetdevhubusername HubOrg --setdefaultusername --definitionfile config/project-scratch-def.json --setalias ciorg --wait 10 --durationdays 1"
+                //rmsg = command "${toolbelt} force:org:create --targetdevhubusername HubOrg --setdefaultusername --definitionfile config/project-scratch-def.json --setalias ciorg --wait 10 --durationdays 1"
+                rmsg = command "${toolbelt} force:org:create --targetdevhubusername HubOrg --setdefaultusername --definitionfile config/project-scratch-def.json --setalias myScratchOrg --wait 10 --durationdays 1"
+                println rmsg
+                /*
+                def beginIndex = rmsg.indexOf('{')
+                def endIndex = rmsg.indexOf('}')
+                println(beginIndex)
+                println(endIndex)
+                def jsobSubstring = rmsg.substring(beginIndex)
+                println(jsobSubstring)
                 
-                println rc
+                def jsonSlurper = new JsonSlurperClassic()
+                def robj = jsonSlurper.parseText(jsobSubstring)
+                //if (robj.status != "ok") { error 'org creation failed: ' + robj.message }
+                SFDC_USERNAME=robj.result.username
+                robj = null
                 if (rc != 0) {
                     error 'Salesforce test scratch org creation failed.'
                 }
+                */
             }
 
 
             // -------------------------------------------------------------------------
             // Display test scratch org info.
             // -------------------------------------------------------------------------
-
+            
             stage('Display Test Scratch Org') {
-                rc = command "${toolbelt} force:org:display --targetusername ciorg"
+                rc = command "${toolbelt} force:org:display --targetusername myScratchOrg"
                 if (rc != 0) {
                     error 'Salesforce test scratch org display failed.'
                 }
             }
-
+            
 
             // -------------------------------------------------------------------------
             // Push source to test scratch org.
             // -------------------------------------------------------------------------
 
             stage('Push To Test Scratch Org') {
-                rc = command "${toolbelt} force:source:push --targetusername ciorg"
+                rc = command "${toolbelt} force:source:push --targetusername myScratchOrg"
                 if (rc != 0) {
                     error 'Salesforce push to test scratch org failed.'
                 }
@@ -91,26 +103,26 @@ node {
             // -------------------------------------------------------------------------
             // Run unit tests in test scratch org.
             // -------------------------------------------------------------------------
-
+            /*
             stage('Run Tests In Test Scratch Org') {
-                rc = command "${toolbelt} force:apex:test:run --targetusername ciorg --wait 10 --resultformat tap --codecoverage --testlevel ${TEST_LEVEL}"
+                rc = command "${toolbelt} force:apex:test:run --targetusername myScratchOrg --wait 10 --resultformat tap --codecoverage --testlevel ${TEST_LEVEL}"
                 if (rc != 0) {
                     error 'Salesforce unit test run in test scratch org failed.'
                 }
             }
-
+            */
 
             // -------------------------------------------------------------------------
             // Delete test scratch org.
             // -------------------------------------------------------------------------
-
+            /*
             stage('Delete Test Scratch Org') {
                 rc = command "${toolbelt} force:org:delete --targetusername ciorg --noprompt"
                 if (rc != 0) {
                     error 'Salesforce test scratch org deletion failed.'
                 }
             }
-
+            */
 
             // -------------------------------------------------------------------------
             // Create package version.
